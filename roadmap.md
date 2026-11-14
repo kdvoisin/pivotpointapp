@@ -3,3 +3,6 @@
 - [x] Connect evidence-grounded AI analysis and document text extraction.
 - [x] Verify corrections, evidence rules, clearing, and mobile layout.
 - [x] Match the reference workspace layout while preserving the current palette and tools.
+- [x] Simplify experience entry, require explicit skill selection, and translate to a chosen target.
+- [x] Show an honest unavailable state for real jobs until a current job-search source is connected.
+- [x] Verify the updated journey and mobile layout.

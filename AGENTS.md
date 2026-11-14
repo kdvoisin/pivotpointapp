@@ -34,3 +34,5 @@ use the editor.
 - Run evidence analysis through a public, input-validated TanStack server function and the Lovable AI Gateway; no account is required for this MVP.
 - Extract document text in browser event handlers with dynamically imported parsers, so files are not stored and parser globals do not execute during SSR.
 - Validate every Supported quote against its exact source before displaying analysis, so unsupported generated claims cannot receive a Supported label.
+- Keep discovered capabilities separate from target bridge results and invalidate bridges when selections or direction change, so every displayed translation matches the current choices.
+- Real-opening results require a connected current job-search source; without one, show an unavailable state and never send listing generation to AI, because plausible career ideas are not verified jobs.

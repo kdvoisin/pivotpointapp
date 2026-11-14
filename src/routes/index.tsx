@@ -1,39 +1,50 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { ArrowRight, Check, FolderOpen, Pencil, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { PivotShell, PageIntro } from "@/components/pivot-shell";
 import { usePivot } from "@/components/pivot-provider";
 import { extractDocument } from "@/lib/documents";
+import type { Entry } from "@/lib/pivot";
 
-export const Route = createFileRoute("/")({ head: () => ({ meta: [{ title: "Discover your experience — PivotPoint" }, { name: "description", content: "Start with work you have actually done. Discover transferable capabilities grounded in your experience." }, { property: "og:title", content: "Discover your experience — PivotPoint" }, { property: "og:description", content: "Your experience is the starting point for new career possibilities." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: Index });
+export const Route = createFileRoute("/")({ head: () => ({ meta: [{ title: "Enter experience — PivotPoint" }, { name: "description", content: "Describe your real experience or upload career materials to discover transferable skills." }, { property: "og:title", content: "Enter experience — PivotPoint" }, { property: "og:description", content: "Find transferable skills grounded in your own words." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: Index });
 
 function Index() {
-  const session = usePivot();
-  const navigate = useNavigate();
-  const [text, setText] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editTitle, setEditTitle] = useState("");
+  const session = usePivot(); const navigate = useNavigate();
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const textarea = useRef<HTMLTextAreaElement>(null);
-  const addExperience = () => {
-    if (!text.trim()) return;
-    session.changeEntries([...session.entries, { id: crypto.randomUUID(), title: `Experience ${session.entries.filter((e) => e.title.startsWith("Experience")).length + 1}`, text: text.trim() }]); setText("");
-  };
   const upload = async (files: FileList | null) => {
-    if (!files) return;
-    setUploading(true); const entries = []; const errors: string[] = [];
-    for (const file of Array.from(files)) { try { entries.push({ id: crypto.randomUUID(), title: file.name, text: await extractDocument(file) }); } catch (error) { errors.push(error instanceof Error ? error.message : "Couldn’t read this file. Please paste text instead."); } }
-    if (entries.length) session.changeEntries([...session.entries, ...entries].slice(0, 20));
+    if (!files || uploading || session.busy) return;
+    setUploading(true); const entries: Entry[] = []; const errors: string[] = [];
+    const documents = session.entries.filter((entry) => entry.id !== "typed-experience");
+    for (const file of Array.from(files)) {
+      if (documents.length + entries.length >= 19) { errors.push("You can add up to 19 documents alongside your written experience."); break; }
+      try { entries.push({ id: crypto.randomUUID(), title: file.name, text: await extractDocument(file) }); }
+      catch (error) { errors.push(error instanceof Error ? error.message : "Couldn’t read this file. Please paste text instead."); }
+    }
+    if (entries.length) session.changeEntries([...session.entries, ...entries]);
     setUploadErrors(errors); setUploading(false); if (fileInput.current) fileInput.current.value = "";
   };
-  return <PivotShell><PageIntro step={1} title="Your experience goes beyond your job title." subtitle="Start with work you’ve actually done. PivotPoint connects your experience to capabilities you can take into a new role." />
-    <div className="workspace-grid"><div><section className="input-panel"><span className="panel-symbol"><Pencil size={17} /></span><h2 className="section-heading">Describe your experience</h2><p className="panel-description">Tell us about a project, an everyday responsibility, or a problem you helped solve.</p><label className="field-label" htmlFor="experience">What did you do?</label><Textarea ref={textarea} id="experience" className="experience-text" maxLength={30000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write or paste your experience" /><div className="field-foot"><span>Big or small, paid or unpaid — it all counts.</span><span>{text.length.toLocaleString()} / 30,000</span></div><details className="writing-prompts"><summary>Writing prompts</summary><div className="prompt-row">{["What was your contribution?", "What changed because of it?", "What’s the evidence?"].map((prompt) => <Button key={prompt} variant="secondary" onClick={() => { setText((value) => value + (value ? "\n\n" : "") + prompt + "\n"); textarea.current?.focus(); }}><Plus />{prompt}</Button>)}</div></details><div className="experience-add-action"><Button variant="outline" size="sm" disabled={!text.trim() || uploading || session.entries.length >= 20} onClick={addExperience}><Plus /> Add experience</Button></div><label className="privacy-consent"><input type="checkbox" checked={session.consent} onChange={(e) => session.setConsent(e.target.checked)} /><span><strong className="privacy-title">Privacy before analysis</strong>I agree to send my text and extracted document content to the AI provider for analysis. Materials are kept only in this session. Avoid sharing sensitive personal information.</span></label>{session.error && <p className="error-message" role="alert">{session.error}</p>}<div className="panel-actions"><p><span className="inline-flex items-center gap-1"><Check size={12} /> Your words. Nothing invented.</span></p><Button variant="discover" disabled={!session.entries.length || !session.consent || session.busy || uploading || !!text.trim()} onClick={async () => { if (await session.run()) void navigate({ to: "/remix" }); }}><Sparkles />{session.busy ? "Finding your capabilities…" : "Discover my capabilities"}<ArrowRight /></Button></div>{text.trim() && <p className="mt-2 text-[10px] text-muted-foreground">Add your experience above before continuing.</p>}</section></div><div className="workspace-side"><section className="upload-panel"><span className="panel-symbol"><Upload size={17} /></span><h2 className="section-heading">Upload materials</h2><p className="panel-description">Add resumes, reviews, or written examples. You can select multiple files.</p><input ref={fileInput} type="file" multiple className="hidden" accept=".pdf,.docx,.doc,.txt,.rtf,.odt" onChange={(e) => void upload(e.target.files)} /><Button asChild variant="ghost" className="h-auto p-0"><div className="upload-zone" role="button" tabIndex={0} aria-label="Upload career materials" onClick={() => fileInput.current?.click()} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInput.current?.click(); }} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void upload(e.dataTransfer.files); }}><Upload /><strong>{uploading ? "Reading your materials…" : "Drop your documents here or browse files"}</strong><span>Resumes, reviews, notes, and stories</span><span>PDF, DOCX, ODT, TXT · Up to 10 MB each</span></div></Button><p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Text-based PDFs only. DOC and RTF: please convert or paste text.</p>{uploadErrors.map((error) => <p className="error-message" key={error}>{error}</p>)}</section><section className="repository"><div className="repository-title"><h2 className="section-heading">Experience repository <span className="count-label">({session.entries.length})</span></h2></div>{!session.entries.length ? <div className="empty-repository"><FolderOpen /><div><strong className="block font-medium text-foreground">A place for your story</strong><span className="mt-1 block text-[11px]">Your added experiences and documents will appear here.</span></div></div> : session.entries.map((entry) => <article className="entry-row" key={entry.id}><div className="entry-row-header"><strong className="text-sm">{entry.title}</strong><div className="flex"><Button variant="ghost" size="icon" title="Edit experience" aria-label={`Edit ${entry.title}`} onClick={() => { setEditing(entry.id); setEditText(entry.text); setEditTitle(entry.title); }}><Pencil /></Button><Button variant="ghost" size="icon" title="Remove experience" aria-label={`Remove ${entry.title}`} onClick={() => session.changeEntries(session.entries.filter((item) => item.id !== entry.id))}><Trash2 /></Button></div></div>{editing === entry.id ? <div><Input aria-label="Experience title" value={editTitle} maxLength={200} onChange={(e) => setEditTitle(e.target.value)} /><Textarea aria-label="Edit experience text" className="mt-2" value={editText} maxLength={30000} onChange={(e) => setEditText(e.target.value)} /><div className="mt-2 flex gap-2"><Button size="sm" disabled={!editText.trim() || !editTitle.trim()} onClick={() => { session.changeEntries(session.entries.map((item) => item.id === entry.id ? { ...item, title: editTitle.trim(), text: editText.trim() } : item)); setEditing(null); }}><Check />Save changes</Button><Button size="sm" variant="ghost" onClick={() => setEditing(null)}><X />Cancel</Button></div></div> : <p>{entry.text.length > 260 ? entry.text.slice(0, 260) + "…" : entry.text}</p>}</article>)}</section></div></div>
-
+  const discover = async () => {
+    const documents = session.entries.filter((entry) => entry.id !== "typed-experience");
+    const entries = session.experienceText.trim() ? [{ id: "typed-experience", title: "Your experience", text: session.experienceText.trim() }, ...documents] : documents;
+    session.changeEntries(entries);
+    if (await session.run(false, entries)) void navigate({ to: "/remix" });
+  };
+  return <PivotShell><PageIntro step={1} title="Enter your experience." subtitle="Start with what you’ve actually done. Your next chapter begins in your own words." />
+    <div className="experience-column">
+      <section><label className="section-heading" htmlFor="experience">Describe or paste your experience</label><Textarea id="experience" className="experience-text mt-4 min-h-48" maxLength={30000} value={session.experienceText} disabled={session.busy} onChange={(e) => { session.setExperienceText(e.target.value); session.changeEntries(session.entries); }} placeholder="A project, an everyday responsibility, or a problem you helped solve…" /><div className="field-foot"><span>Paid or unpaid, big or small.</span><span>{session.experienceText.length.toLocaleString()} / 30,000</span></div></section>
+      <section className="mt-7"><h2 className="section-heading">Upload a file</h2><input ref={fileInput} type="file" multiple className="hidden" accept=".pdf,.docx,.odt,.txt" disabled={uploading || session.busy} onChange={(e) => void upload(e.target.files)} />
+        <div className={`upload-zone mt-4 ${dragging ? "dragging" : ""}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files); }}><Upload aria-hidden="true" /><strong>{uploading ? "Reading your file…" : "Drag and drop your file here"}</strong><Button variant="outline" size="sm" disabled={uploading || session.busy} onClick={() => fileInput.current?.click()}>Browse files</Button><span>PDF, DOCX, ODT, TXT · Up to 10 MB each</span></div>
+        {session.entries.filter((entry) => entry.id !== "typed-experience").map((entry) => <div className="uploaded-file" key={entry.id}><FileText size={16} /><span>{entry.title}</span><Button variant="ghost" size="icon" disabled={session.busy || uploading} title="Remove file" aria-label={`Remove ${entry.title}`} onClick={() => session.changeEntries(session.entries.filter((item) => item.id !== entry.id))}><Trash2 /></Button></div>)}
+        {uploadErrors.map((error) => <p className="error-message" role="alert" key={error}>{error}</p>)}
+      </section>
+      <label className="privacy-consent"><input type="checkbox" checked={session.consent} disabled={session.busy} onChange={(e) => session.setConsent(e.target.checked)} /><span>I agree to send my text and extracted document content to the AI provider for analysis. Materials stay in this session only. Avoid sensitive personal information.</span></label>
+      {session.error && <p className="error-message" role="alert">{session.error}</p>}
+      <div className="journey-actions"><Button variant="discover" disabled={(!session.experienceText.trim() && !session.entries.some((entry) => entry.id !== "typed-experience")) || !session.consent || session.busy || uploading} onClick={() => void discover()}><Sparkles />{session.busy ? "Finding your capabilities…" : "Discover my capabilities"}<ArrowRight /></Button></div>
+    </div>
   </PivotShell>;
 }
