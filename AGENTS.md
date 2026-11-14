@@ -28,3 +28,9 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## App architecture
+- Keep the journey's shared state in a root-mounted React provider, without browser or database persistence, so navigation preserves a session without saving career materials.
+- Run evidence analysis through a public, input-validated TanStack server function and the Lovable AI Gateway; no account is required for this MVP.
+- Extract document text in browser event handlers with dynamically imported parsers, so files are not stored and parser globals do not execute during SSR.
+- Validate every Supported quote against its exact source before displaying analysis, so unsupported generated claims cannot receive a Supported label.
