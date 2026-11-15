@@ -11,12 +11,6 @@ import type { Entry } from "@/lib/pivot";
 
 export const Route = createFileRoute("/")({ head: () => ({ meta: [{ title: "Enter experience — PivotPoint" }, { name: "description", content: "Describe your real experience or upload career materials to discover transferable skills." }, { property: "og:title", content: "Enter experience — PivotPoint" }, { property: "og:description", content: "Find transferable skills grounded in your own words." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: Index });
 
-const prompts = [
-  { label: "What did you actually do?", insert: "\n\nWhat I did: " },
-  { label: "What changed because of it?", insert: "\n\nWhat changed because of it: " },
-  { label: "What can you point to as evidence?", insert: "\n\nEvidence I could point to: " },
-];
-
 function Index() {
   const session = usePivot(); const navigate = useNavigate();
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -26,10 +20,6 @@ function Index() {
   const experienceInput = useRef<HTMLTextAreaElement>(null);
   const hasTyped = session.entries.some((entry) => entry.id === "typed-experience");
   const updateExperience = (value: string) => { if (hasTyped) session.reviseEntryText("typed-experience", value); else session.setExperienceText(value); };
-  const addPrompt = (insert: string) => {
-    updateExperience(`${session.experienceText}${insert}`);
-    requestAnimationFrame(() => { const input = experienceInput.current; if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } });
-  };
   const upload = async (files: FileList | null) => {
     if (!files || uploading || session.busy) return;
     setUploading(true); const entries: Entry[] = []; const errors: string[] = [];
@@ -50,7 +40,7 @@ function Index() {
   };
   return <PivotShell><PageIntro step={1} title="Enter your experience." subtitle="Start with what you’ve actually done. Your next chapter begins in your own words." />
     <div className="experience-column">
-      <section><label className="section-heading" htmlFor="experience">Describe or paste your experience</label><Textarea ref={experienceInput} id="experience" className="experience-text mt-4 min-h-48" maxLength={30000} value={session.experienceText} disabled={session.busy} onChange={(e) => updateExperience(e.target.value)} placeholder="A project, an everyday responsibility, or a problem you helped solve…" /><div className="prompt-row">{prompts.map((prompt) => <Button key={prompt.label} variant="outline" size="sm" disabled={session.busy} onClick={() => addPrompt(prompt.insert)}>{prompt.label}</Button>)}</div><div className="field-foot"><span>Paid or unpaid, big or small.</span><span>{session.experienceText.length.toLocaleString()} / 30,000</span></div></section>
+      <section><label className="section-heading" htmlFor="experience">Describe or paste your experience</label><Textarea ref={experienceInput} id="experience" className="experience-text mt-4 min-h-48" maxLength={30000} value={session.experienceText} disabled={session.busy} onChange={(e) => updateExperience(e.target.value)} placeholder="A project, an everyday responsibility, or a problem you helped solve…" /><div className="field-foot"><span>Paid or unpaid, big or small.</span><span>{session.experienceText.length.toLocaleString()} / 30,000</span></div></section>
       <section className="mt-7"><h2 className="section-heading">Upload a file</h2><input ref={fileInput} type="file" multiple className="hidden" accept={uploadAccept} disabled={uploading || session.busy} onChange={(e) => void upload(e.target.files)} />
         <div className={`upload-zone mt-4 ${dragging ? "dragging" : ""}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files); }}><Upload aria-hidden="true" /><strong>{uploading ? "Reading your file…" : "Drag and drop your file here"}</strong><Button variant="outline" size="sm" disabled={uploading || session.busy} onClick={() => fileInput.current?.click()}>Browse files</Button><span>{supportedUploadFormats} · Up to 10 MB each</span><span>Resumes, performance reviews, written anecdotes. Scanned PDFs need pasted text.</span></div>
         {session.entries.filter((entry) => entry.id !== "typed-experience").map((entry) => <div className="uploaded-file" key={entry.id}><FileText size={16} /><span>{entry.title}</span><Button variant="ghost" size="icon" disabled={session.busy || uploading} title="Remove file" aria-label={`Remove ${entry.title}`} onClick={() => session.changeEntries(session.entries.filter((item) => item.id !== entry.id))}><Trash2 /></Button></div>)}
