@@ -36,3 +36,4 @@ use the editor.
 - Validate every Supported quote against its exact source before displaying analysis, so unsupported generated claims cannot receive a Supported label.
 - Keep discovered capabilities separate from target bridge results and invalidate bridges when selections or direction change, so every displayed translation matches the current choices.
 - Real-opening results require a connected current job-search source; without one, show an unavailable state and never send listing generation to AI, because plausible career ideas are not verified jobs.
+- Apply user corrections (skill name or description, source-text edits, added context, interview answers) to the already-grounded analysis state and re-validate evidence there, so editing never routes through the AI model or invents new claims.
