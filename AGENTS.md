@@ -35,5 +35,6 @@ use the editor.
 - Extract document text in browser event handlers with dynamically imported parsers, so files are not stored and parser globals do not execute during SSR.
 - Validate every Supported quote against its exact source before displaying analysis, so unsupported generated claims cannot receive a Supported label.
 - Keep discovered capabilities separate from target bridge results and invalidate bridges when selections or direction change, so every displayed translation matches the current choices.
-- Real-opening results require a connected current job-search source; without one, show an unavailable state and never send listing generation to AI, because plausible career ideas are not verified jobs.
+- Explore the Possibilities matches against the imported O*NET catalog (public read-only tables, pgvector embeddings) and shows occupations, never job openings; AI only ranks and explains retrieved records, and validateMatches drops any code, title or responsibility not in those records, so every suggestion is a real database entry.
+- Load O*NET releases with the service key over the Data API (sandbox psql cannot write); record each release and its counts in onet_releases.
 - Apply user corrections (skill name or description, source-text edits, added context, interview answers) to the already-grounded analysis state and re-validate evidence there, so editing never routes through the AI model or invents new claims.

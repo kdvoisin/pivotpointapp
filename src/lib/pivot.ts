@@ -25,7 +25,6 @@ export function initialSkillSelection(): string[] { return []; }
 export function canDiscoverBridge(selected: string[], mode: PivotMode, direction: string, jobDescription: string) {
   return selected.length > 0 && (mode === "options" || (mode === "title" ? !!direction.trim() : !!jobDescription.trim()));
 }
-export const jobSearchConnected = false;
 export function validateSelectedBridge(analysis: Analysis, selected: string[]): Analysis {
   const pathway = analysis.pathways[0];
   if (!pathway || selected.some((name) => pathway.skills.filter((skill) => skill.capability === name).length !== 1)) throw new Error("Incomplete selected-skill translation");

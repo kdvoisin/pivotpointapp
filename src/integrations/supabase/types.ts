@@ -14,13 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      onet_elements: {
+        Row: {
+          code: string
+          element_id: string
+          element_name: string
+          importance: number
+          kind: string
+        }
+        Insert: {
+          code: string
+          element_id: string
+          element_name: string
+          importance: number
+          kind: string
+        }
+        Update: {
+          code?: string
+          element_id?: string
+          element_name?: string
+          importance?: number
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onet_elements_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "onet_occupations"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      onet_occupations: {
+        Row: {
+          code: string
+          description: string
+          embedding: string | null
+          title: string
+        }
+        Insert: {
+          code: string
+          description: string
+          embedding?: string | null
+          title: string
+        }
+        Update: {
+          code?: string
+          description?: string
+          embedding?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      onet_releases: {
+        Row: {
+          imported_at: string
+          license: string
+          record_counts: Json
+          source_url: string
+          version: string
+        }
+        Insert: {
+          imported_at?: string
+          license: string
+          record_counts?: Json
+          source_url: string
+          version: string
+        }
+        Update: {
+          imported_at?: string
+          license?: string
+          record_counts?: Json
+          source_url?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      onet_tasks: {
+        Row: {
+          code: string
+          task: string
+          task_id: number
+          task_type: string | null
+        }
+        Insert: {
+          code: string
+          task: string
+          task_id: number
+          task_type?: string | null
+        }
+        Update: {
+          code?: string
+          task?: string
+          task_id?: number
+          task_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onet_tasks_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "onet_occupations"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      onet_titles: {
+        Row: {
+          code: string
+          id: number
+          kind: string
+          title: string
+        }
+        Insert: {
+          code: string
+          id?: number
+          kind: string
+          title: string
+        }
+        Update: {
+          code?: string
+          id?: number
+          kind?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onet_titles_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "onet_occupations"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_occupations: {
+        Args: {
+          match_count: number
+          match_offset?: number
+          query_embedding: string
+        }
+        Returns: {
+          code: string
+          description: string
+          similarity: number
+          title: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

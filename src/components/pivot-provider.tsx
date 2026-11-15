@@ -1,6 +1,8 @@
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeExperience } from "@/lib/analysis.functions";
+import { matchOccupations } from "@/lib/occupations.functions";
+import type { OccupationMatch } from "@/lib/occupations";
 import { appendContext, canDiscoverBridge, groundAnalysis, initialSkillSelection, removeCapability, renameSelected, reviseCapability, withInterview, type Analysis, type Entry, type PivotMode } from "@/lib/pivot";
 
 function useSession() {
@@ -17,12 +19,15 @@ function useSession() {
   const [error, setError] = useState("");
   const [consent, setConsent] = useState(false);
   const [contextAnswers, setContextAnswers] = useState<Record<string, string>>({});
+  const [matches, setMatches] = useState<OccupationMatch[]>([]);
+  const [matchState, setMatchState] = useState<{ busy: boolean; error: string; hasMore: boolean; nextOffset: number; release: string | null }>({ busy: false, error: "", hasMore: false, nextOffset: 0, release: null });
   const generation = useRef(0);
+  const searchOccupations = useServerFn(matchOccupations);
   const analyze = useServerFn(analyzeExperience);
   const changeEntries = (next: Entry[]) => {
-    generation.current += 1; setEntries(next); setAnalysis(null); setBridge(null); setBridgeReady(false); setSelected([]); setError(""); setBusy(false);
+    generation.current += 1; setMatches([]); setEntries(next); setAnalysis(null); setBridge(null); setBridgeReady(false); setSelected([]); setError(""); setBusy(false);
   };
-  const invalidateBridge = () => { generation.current += 1; setBridge(null); setBridgeReady(false); setBusy(false); setError(""); };
+  const invalidateBridge = () => { generation.current += 1; setMatches([]); setMatchState({ busy: false, error: "", hasMore: false, nextOffset: 0, release: null }); setBridge(null); setBridgeReady(false); setBusy(false); setError(""); };
   const changeSelected = (next: string[]) => { invalidateBridge(); setSelected(next); };
   const changeDirection = (next: string) => { invalidateBridge(); setDirection(next); };
   const changeJobDescription = (next: string) => { invalidateBridge(); setJobDescription(next); };
@@ -64,10 +69,22 @@ function useSession() {
     if (removed) setSelected((names) => names.filter((name) => name !== removed.name));
   };
   const setInterview = (capability: string, interview: string) => { if (bridge) setBridge(withInterview(bridge, capability, interview)); };
+  const exploreMore = async (offset = matchState.nextOffset) => {
+    const capabilities = (analysis?.capabilities ?? []).filter((c) => selected.includes(c.name)).map((c) => ({ name: c.name, description: c.description, quote: c.evidence.quote }));
+    if (!capabilities.length) return;
+    const current = generation.current;
+    setMatchState((s) => ({ ...s, busy: true, error: "" }));
+    try {
+      const result = await searchOccupations({ data: { capabilities, focus: direction, offset } });
+      if (generation.current !== current) return;
+      setMatches((previous) => [...(offset === 0 ? [] : previous), ...result.matches.filter((m) => !previous.some((p) => p.code === m.code) || offset === 0)]);
+      setMatchState({ busy: false, error: result.error ?? "", hasMore: result.hasMore, nextOffset: result.nextOffset, release: result.release });
+    } catch { if (generation.current === current) setMatchState((s) => ({ ...s, busy: false, error: "We couldn’t connect. Please try again." })); }
+  };
   const run = async (remix = false, inputEntries = entries) => {
     if (!consent || !inputEntries.length) return false;
     if (remix && !canDiscoverBridge(selected, mode, direction, jobDescription)) return false;
-    if (remix && mode === "options") { setBridge(null); setBridgeReady(true); setError(""); return true; }
+    if (remix && mode === "options") { setBridge(null); setBridgeReady(true); setError(""); setMatches([]); void exploreMore(0); return true; }
     const current = ++generation.current;
     setBusy(true); setError("");
     try {
@@ -81,7 +98,7 @@ function useSession() {
     finally { if (generation.current === current) setBusy(false); }
   };
   const clear = () => { changeEntries([]); setDirection(""); setJobDescription(""); setExperienceText(""); setModeState("options"); setConsent(false); setContextAnswers({}); };
-  return { entries, changeEntries, analysis, bridge, bridgeReady, selected, setSelected: changeSelected, direction, setDirection: changeDirection, jobDescription, setJobDescription: changeJobDescription, mode, setMode, experienceText, setExperienceText, busy, error, consent, setConsent, run, clear, reviseEntryText, addContext, contextAnswers, reviseCapabilityEntry, removeCapabilityEntry, setInterview };
+  return { entries, changeEntries, analysis, bridge, bridgeReady, selected, setSelected: changeSelected, direction, setDirection: changeDirection, jobDescription, setJobDescription: changeJobDescription, mode, setMode, experienceText, setExperienceText, busy, error, consent, setConsent, run, clear, reviseEntryText, addContext, contextAnswers, reviseCapabilityEntry, removeCapabilityEntry, setInterview, matches, matchState, exploreMore };
 }
 type Session = ReturnType<typeof useSession>;
 const PivotContext = createContext<Session | null>(null);
